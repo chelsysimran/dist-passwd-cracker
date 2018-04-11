@@ -271,7 +271,7 @@ int main(int argc, char *argv[])
 
     // if (strlen(found_pw) > 0) 
     // {
-        
+        //printf("Recovered password: %s\n", found_pw);
     // }
 
     MPI_Finalize();
