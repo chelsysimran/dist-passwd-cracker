@@ -44,6 +44,7 @@ char found_pw[128] = { 0 };
 
 int my_rank;
 int comm_size;
+unsigned long counter = 0;
 
 /**
  * Generates passwords in order (brute-force) and checks them against a
@@ -59,7 +60,6 @@ bool crack(char *target, char *str, int max_length)
     int curr_len = strlen(str);
     char *strcp = calloc(max_length + 1, sizeof(char));
     strcpy(strcp, str);
-    int counter = 0;
     int flag = 0;
 
     /* We'll copy the current string and then add the next character to it. So
@@ -68,7 +68,7 @@ bool crack(char *target, char *str, int max_length)
     for (i = 0; i < strlen(valid_chars); ++i) 
     {
 
-        printf("%s\n", "hi3");
+        //printf("%s\n", "hi3");
 
     //call iProbe to check if the pword has been found (gets from send)
     MPI_Iprobe(MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &flag,  MPI_STATUS_IGNORE); 
@@ -84,11 +84,11 @@ bool crack(char *target, char *str, int max_length)
         {
             MPI_Recv(found_pw, 128, MPI_CHAR, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             
-            if (strlen(found_pw) > 0) 
-            {
-                printf("Recovered password: %s\n", found_pw);
-                printf("%s\n%d\n", valid_chars, comm_size); //valid charaters numprocs
-            }
+            // if (strlen(found_pw) > 0) 
+            // {
+            //     printf("Recovered password: %s\n", found_pw);
+            //     printf("%s\n%d\n", valid_chars, comm_size); //valid charaters numprocs
+            // }
         }
 
         strcp[curr_len] = valid_chars[i];
@@ -97,9 +97,7 @@ bool crack(char *target, char *str, int max_length)
         {
             bool found = crack(target, strcp, max_length);
             
-            counter++;
-            
-            printf("%d\n", counter); //printing counter to check whether its getting to this partttt
+            //printf("%d\n", counter); //printing counter to check whether its getting to this partttt
             
             if (found == true) 
             {
@@ -108,17 +106,21 @@ bool crack(char *target, char *str, int max_length)
         } 
 
         else 
+        
         {
             /* Only check the hash if our string is long enough */
             char hash[41];
             sha1sum(hash, strcp);
             /* TODO: This prints way too often... */
-            if (counter >= 1000000) //it only prints every one million combinations
+            counter++;
+            if (counter % 1000000 == 0) //it only prints every one million combinations
             {
                 printf("%s -> %s\n", strcp, hash);
             }
             
-            if (strcmp(hash, target) == 0) {
+            if (strcmp(hash, target) == 0) 
+
+            {
                 /* We found a match! */
                 strcpy(found_pw, strcp);
 
@@ -137,8 +139,8 @@ bool crack(char *target, char *str, int max_length)
         }
     }
 
-    // free(strcp);
-    //return false;
+    free(strcp);
+    return false;
 }
 /**
  * Modifies a string to only contain uppercase characters.
@@ -177,7 +179,7 @@ int main(int argc, char *argv[])
     int length = atoi(argv[1]);
     char *target = argv[2];
 
-     valid_chars = alpha_num; // sets the default = alpha_num
+    valid_chars = alpha_num; // sets the default = alpha_num
 
      //2 cases, if the argument passed by the user is 'alpha', this re-sets the value of valid chars to that
     
@@ -218,6 +220,7 @@ int main(int argc, char *argv[])
         printf("%s\n", "Starting parallel password cracker." );
         printf("%s%d\n", "Number of Processes: ", comm_size);
         printf("%s%s\n", "Valid characters: ", valid_chars);
+        printf("%s%d\n", "Target password length: ", length);
 
     }
 
@@ -238,20 +241,14 @@ int main(int argc, char *argv[])
 
     for (i = start; i < end; ++i) 
     {
-        printf("%s\n", "hi"); //printing check
+        //printf("%s\n", "hi"); //printing check
         char start_str[2] = {valid_chars[i], '\0'};
         bool found = crack(target, start_str, length);
 
         if (found)
         break;
-        printf("%s\n", "hi2"); //printing check
-    }
-    
-
-    if (strlen(found_pw) > 0) 
-    {
-        printf("Recovered password: %s\n", found_pw);
-    }
+        //printf("%s\n", "hi2"); //printing check
+    } 
 
     double time_1 = MPI_Wtime();
     long total;
@@ -262,13 +259,20 @@ int main(int argc, char *argv[])
     if(my_rank == 0)
     
     {
-        printf("%s%d\n", "Target password length: ", length);
+        
         printf("%s%s\n", "Target hash: ", target);
         printf("%s\n", "Operation Complete!");
         printf("%s%ld\n", "Total number of passwords hashed: ", total);
         printf("%s%f\n", "Time elapsed: ", time_2 - time_1);
+        printf("Recovered password: %s\n", found_pw);
 
     }
+
+
+    // if (strlen(found_pw) > 0) 
+    // {
+        
+    // }
 
     MPI_Finalize();
     return 0;
